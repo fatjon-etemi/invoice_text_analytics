@@ -8,7 +8,10 @@ from sklearn.svm import SVC
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import f1_score
+import pickle
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
+from gensim.utils import simple_preprocess
 import pytesseract
 import json
 import matplotlib.pyplot as plt
@@ -104,9 +107,26 @@ def clustering():
     plt.show()
 
 
+def classification():
+    train = pd.read_csv('train.txt')
+    X = train["text"]
+    Y = train["lief"]
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
+    documents = [TaggedDocument(simple_preprocess(doc), [i]) for i, doc in enumerate(X_train)]
+    model = Doc2Vec(documents, vector_size=100, window=2, min_count=1, workers=4)
+    model.train(documents, total_examples=len(documents), epochs=10)
+    svm_model = SVC()
+    svm_model.fit(model.docvecs.vectors_docs, Y_train)
+    pickle.dump(model, open('doc2vec.pkl', 'wb'))
+    pickle.dump(svm_model, open('svm.pkl', 'wb'))
+    X_test_vectors = [model.infer_vector(simple_preprocess(x)) for x in X_test]
+    print(svm_model.score(X_test_vectors, Y_test))
+    print(f1_score(Y_test, svm_model.predict(X_test_vectors), average='weighted'))
+
+
 if __name__ == '__main__':
     # get_files()
     # get_data()
     # ocr()
     # merge()
-    clustering()
+    classification()
