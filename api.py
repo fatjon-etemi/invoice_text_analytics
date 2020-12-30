@@ -1,14 +1,12 @@
 import os
-from flask import Flask, flash, request, redirect, url_for, render_template
+from flask import Flask, flash, request, redirect, render_template
 from werkzeug.utils import secure_filename
 import pickle
 from pdf2image import convert_from_path
 import pytesseract
-from gensim.utils import simple_preprocess
 import json
 import pyodbc
 import pandas as pd
-from main import preprocess
 
 ALLOWED_EXTENSIONS = {'pdf'}
 config = json.load(open('config.json'))
@@ -18,8 +16,7 @@ app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
 app.config["DEBUG"] = True
 app.config["UPLOAD_FOLDER"] = './uploads'
 
-model = pickle.load(open('doc2vec.pkl', 'rb'))
-svm_model = pickle.load(open('svm.pkl', 'rb'))
+model = pickle.load(open('model.pkl', 'rb'))
 
 
 def allowed_file(filename):
@@ -37,7 +34,13 @@ def get_supplier(id, fields = ['name']):
     query = "SELECT {} FROM abasbi.dbo.Vendor$Vendor_1_1 WHERE ID = '{}' AND MANDANT_ID = 2"
     query = query.format(','.join(fields), id)
     df = pd.read_sql(query, cnxn)
-    return df.loc[0].to_json()
+    if len(df) > 0:
+        return df.loc[0].to_json()
+    else:
+        query = "SELECT {} FROM abasbi.dbo.Vendor$Vendorcontact_1_2 WHERE ID = '{}' AND MANDANT_ID = 2"
+        query = query.format(','.join(fields), id)
+        df = pd.read_sql(query, cnxn)
+        return df.loc[0].to_json()
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -60,9 +63,9 @@ def upload_file():
             file_string = ''
             for image in images:
                 file_string += pytesseract.image_to_string(image)
-            vector = model.infer_vector(preprocess(file_string))
-            predicted_id = svm_model.predict([vector]).item(0)
-            return get_supplier(predicted_id)
+            predicted_id = model.predict([file_string]).item(0)
+            supplier = json.loads(get_supplier(predicted_id))
+            return render_template('result.html', supplier=supplier)
     return render_template("index.html")
 
 
