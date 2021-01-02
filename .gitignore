@@ -1,0 +1,7 @@
+config.json
+.idea
+data
+data.txt
+train.txt
+uploads
+.ipynb_checkpoints
