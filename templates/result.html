@@ -1,13 +1,26 @@
 <style>
     body {
-        font-family: 'Arial'
+        font-family: 'Arial';
     }
-    form, h1, h2 {
-        text-align: center
+    form, h1, h2, h3 {
+        text-align: center;
+    }
+    th {
+        text-align: left;
+    }
+    table {
+        margin-left: auto;
+        margin-right: auto;
     }
 </style>
 {% extends "layout.html" %}
 {% block body %}
-<h1>Label found</h1>
-<h2>{{supplier.name}}</h2>
+<table>
+{% for key, value in data.items() %}
+   <tr>
+        <th> {{ key }} </th>
+        <td> {{ value }} </td>
+   </tr>
+{% endfor %}
+</table>
 {% endblock %}

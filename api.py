@@ -7,6 +7,8 @@ import pytesseract
 import json
 import pyodbc
 import pandas as pd
+import re
+from datetime import datetime
 
 ALLOWED_EXTENSIONS = {'pdf'}
 config = json.load(open('config.json'))
@@ -43,6 +45,37 @@ def get_supplier(id, fields = ['name']):
         return df.loc[0].to_json()
 
 
+def extract_data(label, text):
+    specific_regex_file = "./regex_templates/" + label + ".json"
+    template_regex_file = "./regex_templates/(TEMPLATE).json"
+    if os.path.isfile(specific_regex_file):
+        regex_template = json.load(open(specific_regex_file))
+    else:
+        regex_template = json.load(open(template_regex_file))
+    result = {}
+    for k, v in regex_template.items():
+        if k == 'options':
+            continue
+        x = re.findall(v, text, re.MULTILINE)
+        if len(x) > 0:
+            for value in x[-1]:
+                if value is not '':
+                    result[k] = value
+                    break
+    if regex_template['options']:
+        options = regex_template['options']
+        if 'invoice_date' in result and 'date_format' in options:
+            result['invoice_date'] = datetime.strptime(result['invoice_date'], options['date_format']).strftime(config['standard_dateformat'])
+        if 'split' in options:
+            for k in options["split"]:
+                v = options["split"][k]
+                if k in result:
+                    splt = result[k].split(v[0])
+                    if len(splt) > 1:
+                        result[k] = splt[v[1]]
+    return result
+
+
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
@@ -65,7 +98,12 @@ def upload_file():
                 file_string += pytesseract.image_to_string(image)
             predicted_id = model.predict([file_string]).item(0)
             supplier = json.loads(get_supplier(predicted_id))
-            return render_template('result.html', supplier=supplier)
+            data = extract_data(predicted_id, file_string)
+            data['supplier_id'] = predicted_id
+            data['supplier_name'] = supplier['name']
+            if request.args.get('format') == 'json':
+                return json.dumps(data)
+            return render_template('result.html', data=data)
     return render_template("index.html")
 
 
