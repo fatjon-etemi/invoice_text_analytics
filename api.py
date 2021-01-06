@@ -1,5 +1,5 @@
 import os
-from flask import Flask, flash, request, redirect, render_template
+from flask import Flask, flash, request, redirect, render_template, Markup
 from werkzeug.utils import secure_filename
 import pickle
 from pdf2image import convert_from_path
@@ -58,11 +58,13 @@ def extract_data(label, text):
             continue
         x = re.findall(v, text, re.MULTILINE)
         if len(x) > 0:
-            for value in x[-1]:
-                if value is not '':
-                    result[k] = value
-                    break
-    if regex_template['options']:
+            if type(x[-1]) == str:
+                result[k] = x[-1]
+            else:
+                result[k] = list(filter(None, x[-1]))[0]
+        # if len(x) > 0:
+        #     list(filter('', x))[0]
+    if 'options' in regex_template:
         options = regex_template['options']
         if 'invoice_date' in result and 'date_format' in options:
             result['invoice_date'] = datetime.strptime(result['invoice_date'], options['date_format']).strftime(config['standard_dateformat'])
@@ -73,7 +75,9 @@ def extract_data(label, text):
                     splt = result[k].split(v[0])
                     if len(splt) > 1:
                         result[k] = splt[v[1]]
-    return result
+    for k, v in result.items():
+        text = text.replace(v, '<span class="highlight">%s</span>' % v, 1)
+    return text, result
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -98,12 +102,12 @@ def upload_file():
                 file_string += pytesseract.image_to_string(image)
             predicted_id = model.predict([file_string]).item(0)
             supplier = json.loads(get_supplier(predicted_id))
-            data = extract_data(predicted_id, file_string)
+            text, data = extract_data(predicted_id, file_string)
             data['supplier_id'] = predicted_id
             data['supplier_name'] = supplier['name']
             if request.args.get('format') == 'json':
                 return json.dumps(data)
-            return render_template('result.html', data=data)
+            return render_template('result.html', data=data, text=Markup(text))
     return render_template("index.html")
 
 
