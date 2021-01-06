@@ -3,15 +3,15 @@
         font-family: 'Arial';
     }
     form, h1, h2, h3, div {
-        text-align: center;
+        text-align: left;
     }
     th {
         text-align: left;
     }
-    table {
-        margin-left: auto;
-        margin-right: auto;
-    }
+<!--    table {-->
+<!--        margin-left: auto;-->
+<!--        margin-right: auto;-->
+<!--    }-->
     div {
         white-space: pre-line;
     }
@@ -19,18 +19,78 @@
         background: blue;
         color: white;
     }
+    input[type=text] {
+        width: 100%;
+        padding: 12px 20px;
+        margin: 8px 0;
+        display: inline-block;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+    input[type=submit] {
+        width: 100%;
+        background-color: #4CAF50;
+        color: white;
+        padding: 14px 20px;
+        margin: 8px 0;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    input[type=submit]:hover {
+        background-color: #45a049;
+    }
+
+    .grid-container {
+        display: grid;
+        grid-template-columns: auto auto;
+        gap: 10px;
+    }
+
+
+
+
+
+
 </style>
 {% extends "layout.html" %}
 {% block body %}
-<table>
-{% for key, value in data.items() %}
-   <tr>
-        <th> {{ key }} </th>
-        <td> {{ value }} </td>
-   </tr>
-{% endfor %}
-</table>
-<div>
-    {{ text }}
+<div class="grid-container">
+    <div>
+        <h1>Extracted Data</h1>
+        <form method="post" action="/book" enctype="multipart/form-data">
+            {% for k, v in data.items() %}
+            <label for="{{k}}">{{ k }}</label>
+            <input type="text" name="{{k}}" value="{{v}}" id="{{k}}">
+            {% endfor %}
+            <input type="submit" value="Save">
+        </form>
+    </div>
+    <div>
+        <h1>Regex Template ({{data.supplier_id}}.json)</h1>
+        {% if form_data %}
+        <form method="post" enctype="multipart/form-data">
+            {% for key, value in form_data.items() %}
+            <label for="{{key}}">{{ key }}</label>
+            <input type="text" name="{{key}}" value="{{value}}" id="{{key}}">
+            {% endfor %}
+            <label for="regex_template_name">file_name</label>
+            <input type="text" id="regex_template_name" name="regex_template_name" value="{{data.supplier_id}}.json">
+            <input type="submit" value="Save">
+        </form>
+        {% endif %}
+    </div>
+    <div>
+        <h1>Text</h1>
+        <div>
+            {{ text }}
+        </div>
+    </div>
+    <div>
+        <h1>PDF-File</h1>
+        <embed src="{{pdf_file}}" width="800px" height="1050px"/>
+    </div>
 </div>
 {% endblock %}

@@ -1,5 +1,5 @@
 import os
-from flask import Flask, flash, request, redirect, render_template, Markup
+from flask import Flask, flash, request, redirect, render_template, Markup, send_from_directory
 from werkzeug.utils import secure_filename
 import pickle
 from pdf2image import convert_from_path
@@ -9,6 +9,8 @@ import pyodbc
 import pandas as pd
 import re
 from datetime import datetime
+import glob
+import random
 
 ALLOWED_EXTENSIONS = {'pdf'}
 config = json.load(open('config.json'))
@@ -77,7 +79,7 @@ def extract_data(label, text):
                         result[k] = splt[v[1]]
     for k, v in result.items():
         text = text.replace(v, '<span class="highlight">%s</span>' % v, 1)
-    return text, result
+    return regex_template, text, result
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -102,14 +104,53 @@ def upload_file():
                 file_string += pytesseract.image_to_string(image)
             predicted_id = model.predict([file_string]).item(0)
             supplier = json.loads(get_supplier(predicted_id))
-            text, data = extract_data(predicted_id, file_string)
+            regex_template, text, data = extract_data(predicted_id, file_string)
             data['supplier_id'] = predicted_id
             data['supplier_name'] = supplier['name']
             if request.args.get('format') == 'json':
                 return json.dumps(data)
-            return render_template('result.html', data=data, text=Markup(text))
+            return render_template('result.html', data=data, text=Markup(text), form_data=regex_template, pdf_file=os.path.join(app.config['UPLOAD_FOLDER'], filename))
     return render_template("index.html")
 
+
+@app.route('/random', methods=['GET', 'POST'])
+def random_invoice():
+    if request.method == 'POST':
+        my_dict = {'invoice_number': request.form['invoice_number'], 'amount': request.form['amount'],
+                   'invoice_date': request.form['invoice_date'], 'currency': request.form['currency']}
+        if 'options' in request.form:
+            my_dict['options'] = json.loads(request.form['options'])
+        print(my_dict)
+        with open('./regex_templates/' + request.form['regex_template_name'], 'w') as file:
+            file.write(json.dumps(my_dict))
+        return 'Saved!'
+    files = glob.glob('./data/*/*.pdf')
+    file = random.choice(files)
+    images = convert_from_path(file)
+    file_string = ''
+    for image in images:
+        file_string += pytesseract.image_to_string(image)
+    predicted_id = model.predict([file_string]).item(0)
+    supplier = json.loads(get_supplier(predicted_id))
+    regex_template, text, data = extract_data(predicted_id, file_string)
+    data['supplier_id'] = predicted_id
+    data['supplier_name'] = supplier['name']
+    return render_template('result.html', data=data, text=Markup(text), form_data=regex_template, pdf_file=file)
+
+
+@app.route('/data/<path:path>', methods=['GET'])
+def send_file_data(path):
+    return send_from_directory('data', path)
+
+
+@app.route('/uploads/<path:path>', methods=['GET'])
+def send_file_uploads(path):
+    return send_from_directory('uploads', path)
+
+
+@app.route('/book', methods=['POST'])
+def book():
+    return 'booked!'
 
 if __name__ == '__main__':
     app.run(port=3000)
