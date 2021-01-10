@@ -2,11 +2,13 @@ import json
 import os
 import re
 import shutil
+from tqdm import tqdm
 
 import pandas as pd
 import pyodbc
 import pytesseract
 from pdf2image import convert_from_path
+from pdf2image.exceptions import PDFPageCountError
 
 path = '//srvaw03/AF-Drive/BACH/Vendor/B'
 pattern = '^PI20_[0-9]{6}$'
@@ -16,14 +18,16 @@ data_path = './data'
 config = json.load(open('config.json'))
 
 
-def get_files():
+def get_files(path):
     for folder in os.listdir(path):
         print(folder)
-        if re.match(pattern, folder) and len(os.listdir(path + "/" + folder)) > 0 and folder not in os.listdir(data_path):
+        if re.match(pattern, folder) and len(os.listdir(path + "/" + folder)) > 0 and folder not in os.listdir(
+                data_path):
             for file in os.listdir(path + "/" + folder):
                 os.mkdir(data_path + '/' + folder)
                 shutil.copyfile(path + "/" + folder + "/" + file, data_path + "/" + folder + "/" + file)
-        elif os.path.isdir(path + "/" + folder) and (re.match(pattern1, folder) or folder == 'invoices' or folder == '_archive'):
+        elif os.path.isdir(path + "/" + folder) and (
+                re.match(pattern1, folder) or folder == 'invoices' or folder == '_archive'):
             get_files(path + "/" + folder)
 
 
@@ -49,18 +53,22 @@ def get_data():
 
 
 def ocr():
-    i = 0
-    for folder in os.listdir(data_path):
-        print(folder, len(os.listdir(data_path)) - i, 'remaining')
-        i += 1
+    t = tqdm(os.listdir(data_path))
+    for folder in t:
+        t.set_description(folder)
+        t.refresh()
+        # print(folder, len(os.listdir(data_path)) - i, 'remaining')
         if not os.path.isfile(data_path + '/' + folder + '/ocr.txt'):
             for file in os.listdir(data_path + "/" + folder):
-                images = convert_from_path(data_path + "/" + folder + "/" + file)
-                file_string = ''
-                for image in images:
-                    file_string += pytesseract.image_to_string(image)
-                with open(data_path + "/" + folder + "/ocr.txt", "w") as f:
-                    f.write(file_string)
+                try:
+                    images = convert_from_path(data_path + "/" + folder + "/" + file)
+                    file_string = ''
+                    for image in images:
+                        file_string += pytesseract.image_to_string(image)
+                    with open(data_path + "/" + folder + "/ocr.txt", "w") as f:
+                        f.write(file_string)
+                except PDFPageCountError:
+                    continue
 
 
 def merge():
@@ -75,7 +83,7 @@ def merge():
 
 
 if __name__ == '__main__':
-    get_files()
+    # get_files(path)
     ocr()
     get_data()
     merge()
