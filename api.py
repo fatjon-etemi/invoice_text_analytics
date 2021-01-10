@@ -69,6 +69,7 @@ def extract_data(label, text):
     if 'options' in regex_template:
         options = regex_template['options']
         if 'invoice_date' in result and 'date_format' in options:
+            result['invoice_date_unformated'] = result['invoice_date']
             result['invoice_date'] = datetime.strptime(result['invoice_date'], options['date_format']).strftime(config['standard_dateformat'])
         if 'split' in options:
             for k in options["split"]:
