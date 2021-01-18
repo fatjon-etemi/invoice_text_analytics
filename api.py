@@ -123,7 +123,7 @@ def random_invoice():
             my_dict['options'] = json.loads(request.form['options'])
         print(my_dict)
         with open('./regex_templates/' + request.form['regex_template_name'], 'w') as file:
-            file.write(json.dumps(my_dict))
+            file.write(json.dumps(my_dict, indent=4))
         return 'Saved!'
     files = glob.glob('./data/*/*.pdf')
     file = random.choice(files)
@@ -136,6 +136,8 @@ def random_invoice():
     regex_template, text, data = extract_data(predicted_id, file_string)
     data['supplier_id'] = predicted_id
     data['supplier_name'] = supplier['name']
+    if 'options' in regex_template:
+        regex_template['options'] = json.dumps(regex_template['options'])
     return render_template('result.html', data=data, text=Markup(text), form_data=regex_template, pdf_file=file)
 
 
