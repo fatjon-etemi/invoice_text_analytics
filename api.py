@@ -28,7 +28,7 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def get_supplier(id, fields = ['name']):
+def get_supplier(id, fields=['name']):
     server = config['server']
     database = config['database']
     username = config['db_user']
@@ -70,7 +70,8 @@ def extract_data(label, text):
         options = regex_template['options']
         if 'invoice_date' in result and 'date_format' in options:
             result['invoice_date_unformated'] = result['invoice_date']
-            result['invoice_date'] = datetime.strptime(result['invoice_date'], options['date_format']).strftime(config['standard_dateformat'])
+            result['invoice_date'] = datetime.strptime(result['invoice_date'], options['date_format']).strftime(
+                config['standard_dateformat'])
         if 'split' in options:
             for k in options["split"]:
                 v = options["split"][k]
@@ -110,12 +111,13 @@ def upload_file():
             data['supplier_name'] = supplier['name']
             if request.args.get('format') == 'json':
                 return json.dumps(data)
-            return render_template('result.html', data=data, text=Markup(text), form_data=regex_template, pdf_file=os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            return render_template('result.html', data=data, text=Markup(text), form_data=regex_template,
+                                   pdf_file=os.path.join(app.config['UPLOAD_FOLDER'], filename))
     return render_template("index.html")
 
 
-@app.route('/random', methods=['GET', 'POST'])
-def random_invoice():
+@app.route('/regex', methods=['POST'])
+def update_regex_file():
     if request.method == 'POST':
         my_dict = {'invoice_number': request.form['invoice_number'], 'amount': request.form['amount'],
                    'invoice_date': request.form['invoice_date'], 'currency': request.form['currency']}
@@ -123,8 +125,12 @@ def random_invoice():
             my_dict['options'] = json.loads(request.form['options'])
         print(my_dict)
         with open('./regex_templates/' + request.form['regex_template_name'], 'w') as file:
-            file.write(json.dumps(my_dict, indent=4))
+            file.write(json.dumps(my_dict, indent=2))
         return 'Saved!'
+
+
+@app.route('/random', methods=['GET'])
+def random_invoice():
     files = glob.glob('./data/*/*.pdf')
     file = random.choice(files)
     images = convert_from_path(file)

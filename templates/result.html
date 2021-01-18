@@ -71,7 +71,7 @@
     <div>
         <h1>Regex Template ({{data.supplier_id}}.json)</h1>
         {% if form_data %}
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" action="/regex" enctype="multipart/form-data">
             {% for key, value in form_data.items() %}
             <label for="{{key}}">{{ key }}</label>
             <input type="text" name="{{key}}" value="{{value}}" id="{{key}}">

@@ -1,6 +1,6 @@
 {
   "invoice_number": "((?<=Rechnung )\\d+-*\\d{6})|((?<=Invoice )\\d+-*\\d{6})",
-  "amount": "(?<=Summe )[0-9']+.\\d{2}",
+  "amount": "((?<=Summe )[0-9']+.\\d{2})|([0-9']+\\.[0-9]{2})(?=\\n)",
   "invoice_date": "(?<=Dokumentendatum )(\\d{2}\\.\\d{2}\\.\\d{4})",
   "currency": "(?<=Gesamtpreis\\n)\\b[A-Z]{3}\\b"
 }
